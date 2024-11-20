@@ -29,6 +29,24 @@ func Handler(handlerID string, m middleware.Middleware, h http.Handler) http.Han
 	})
 }
 
+// HandlerFunc returns an measuring standard http.HandlerFunc.
+func HandlerFunc(handlerID string, m middleware.Middleware, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		wi := &responseWriterInterceptor{
+			statusCode:     http.StatusOK,
+			ResponseWriter: w,
+		}
+		reporter := &stdReporter{
+			w: wi,
+			r: r,
+		}
+
+		m.Measure(handlerID, reporter, func() {
+			h.ServeHTTP(wi, r)
+		})
+	}
+}
+
 // HandlerProvider is a helper method that returns a handler provider. This kind of
 // provider is a defacto standard in some frameworks (e.g: Gorilla, Chi...).
 func HandlerProvider(handlerID string, m middleware.Middleware) func(http.Handler) http.Handler {
